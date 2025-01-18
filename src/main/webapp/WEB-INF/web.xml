@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.5" xmlns="http://Java.sun.com/xml/ns/javaee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee https://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+
+	<!-- The definition of the Root Spring Container shared by all Servlets and Filters -->
+<!-- 	<context-param> -->
+<!-- 		<param-name>contextConfigLocation</param-name> -->
+<!-- 		<param-value>/WEB-INF/spring/root-context.xml</param-value> -->
+<!-- 	</context-param> -->
+
+	<!-- 
+	root-context.xml, servlet-context.xml 등의 설정 파일을 다른 위치로 이동했을 경우
+	해당 위치를 web.xml 파일에 정확하게 기술해야함
+	1) root-context.xml 파일
+	   => 기본 위치 : /WEB-INF/spring/root-context.xml
+	   => 변경할 위치 : /src/main/resources/config/root-context.xml 이며
+	                    /src/main/resources 패키지는 classpath:/ 로 대체하여 지정 가능
+	2) servlet-context.xml 파일
+	   => 기본 위치 : /WEB-INF/spring/appServlet/servlet-context.xml
+	   => 변경할 위치 : /src/main/resources/config/servlet-context.xml 이며
+	                    /src/main/resources 패키지는 classpath:/ 로 대체하여 지정 가능
+	-->
+	<context-param>
+		<param-name>contextConfigLocation</param-name>
+		<param-value>classpath:/config/root-context.xml</param-value>
+	</context-param>
+	
+	<!-- Creates the Spring Container shared by all Servlets and Filters -->
+	<listener>
+		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+	</listener>
+
+	<!-- Processes application requests -->
+	<servlet>
+		<servlet-name>appServlet</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<init-param>
+			<param-name>contextConfigLocation</param-name>
+<!-- 			<param-value>/WEB-INF/spring/appServlet/servlet-context.xml</param-value> -->
+<!-- 			<param-value>classpath:/config/servlet-context.xml</param-value> -->
+			<param-value>
+				classpath:/config/servlet-context.xml
+				classpath:/config/ws-context.xml
+			</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+		
+	<servlet-mapping>
+		<servlet-name>appServlet</servlet-name>
+		<url-pattern>/</url-pattern>
+	</servlet-mapping>
+
+	
+	<!-- POST 방식 파라미터에 대한 한글 등의 인코딩 처리를 위한 필터 설정 -->
+	<filter>
+		<filter-name>encodingFilter</filter-name>
+		<filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+		<init-param>
+			<param-name>encoding</param-name>
+			<param-value>UTF-8</param-value>
+		</init-param>
+	</filter>
+	
+	<filter-mapping>
+		<filter-name>encodingFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	
+	<!-- 
+	[ 예외 처리 페이지 설정 ]
+	1. web.xml 파일에서 에러 코드에 대한 뷰페이지를 지정하는 방법
+	2. 예외 처리를 수행하는 핸들러 클래스를 별도로 정의하여 에러 코드에 대한 처리를 수행하는 방법
+	===============================================================
+	web.xml 파일에서는 <error-page> 태그 사이에 
+	<error-code> 태그를 지정하여 에러 상태코드(ex. 404, 500 등)를 기술하고
+	<location> 태그 사이에 해당 에러 발생 시 포워딩 할 페이지 지정(루트 = webapp 디렉토리 기준)
+	-->
+	<error-page>
+		<error-code>404</error-code>
+		<location>/WEB-INF/views/error/error_404.jsp</location>
+	</error-page>
+	
+<!-- 	<error-page> -->
+<!-- 		<error-code>500</error-code> -->
+<!-- 		<location>/WEB-INF/views/error/error_500.jsp</location> -->
+<!-- 	</error-page> -->
+
+		<!-- <error-code> 태그 대신 <exception-type> 태그로 예외 클래스 지정도 가능 -->
+		<!-- 단, 4xx 에러의 경우 시스템 처리 과정에서의 오류(예외)가 아니므로 통합 불가 -->
+<!-- 	<error-page> -->
+<!-- 		<exception-type>java.lang.Exception</exception-type> -->
+<!-- 		<location>/WEB-INF/views/error/error.jsp</location> -->
+<!-- 	</error-page> -->
+	
+</web-app>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

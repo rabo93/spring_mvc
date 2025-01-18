@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:websocket="http://www.springframework.org/schema/websocket"
+	xsi:schemaLocation="http://www.springframework.org/schema/websocket http://www.springframework.org/schema/websocket/spring-websocket-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+	
+	<!-- 웹소켓 요청에 사용될 요청 주소(/echo)에 대한 핸들러 클래스 매핑 -->
+	<!-- 주의! spring-websocket 라이브러리 추가 및 XML 파일 namespaces - websocket 항목 추가 필수! -->
+	<!-- web.xml 파일에 ws-context.xml 파일도 추가(servlet-context.xml 파일 위치에 함께 추가) -->
+	<!-- 단, ws-context.xml 파일이 필수는 아니며, servlet-context.xml 파일에 설정해도 됨! -->
+	<!-- <websocket:handlers> 태그 활용하여 매핑 작업 수행 -->
+	<websocket:handlers>
+		<!-- <websocket:mapping> 태그 활용하여 매핑에 사용될 주소 지정 -->
+		<websocket:mapping handler="wsHandler" path="/echo"/>
+		<websocket:mapping handler="wsHandler2" path="/echo2"/>
+		<!-- 클라이언트 웹소켓 최초 연결 시 HTTP 통신 과정에서 생성되는 HttpSession 객체 가로채기 -->
+		<!-- => WebSocketHandler 클래스에서 HttpSession 객체의 값들에 접근하기 위함 -->
+		<!-- 가로챈 HttpSession 객체를 WebSocketSession 객체에 저장해주는 인터셉터 정보 설정 -->
+		<!-- spring-websocket 라이브러리에 포함된 HttpSessionHandshakeIntercepter 클래스 지정 -->
+		<websocket:handshake-interceptors>
+			<bean class="org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor" />
+		</websocket:handshake-interceptors>
+	</websocket:handlers>
+
+	<!-- <bean> 태그를 활용하여 매핑에 사용될 클래스 지정 -->
+	<!-- id 속성값은 <websocket:mapping> 태그에서 지정한 handler 속성값 지정) -->
+	<bean id="wsHandler" class="com.itwillbs.mvc_board.handler.MyWebSocketHandler" />
+	<bean id="wsHandler2" class="com.itwillbs.mvc_board.handler.MyWebSocketHandler2" />
+
+</beans>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

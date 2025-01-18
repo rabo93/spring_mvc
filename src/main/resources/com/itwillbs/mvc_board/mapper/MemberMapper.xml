@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itwillbs.mvc_board.mapper.MemberMapper">
+	<!-- 
+	[ 회원가입 - INSERT ]
+	- 회원번호(idx) 컬럼은 자동증가(AUTO_INCREMENT) 컬럼이므로 null 값 전달 시 컬럼값 자동 증가
+	- 이메일(email) 컬럼은 email1, email2 값이 전달되었을 경우 문자열 결합 후 전달 => CONCAT() 함수 활용
+	  만약, 자바스크립트를 통해 email 파라미터로 결합하여 전달되었을 경우 그대로 사용
+	- 가입일자(reg_date) 컬럼은 현재 시스템(DB)의 날짜 및 시각 활용 => NOW() 함수 활용
+	- 탈퇴일자(withdraw_date) 컬럼은 기본값 null 값 전달 (NN 제약조건 없는 컬럼)
+	- 회원상태(member_status) 컬럼은 기본값 1 전달(정상 회원)
+	- 메일인증상태(mail_auth_status) 컬럼은 기본값 'N' 전달(이메일 미인증)
+	-->
+	<insert id="insertMember">
+		INSERT
+		INTO member
+		VALUES (
+			null              -- 번호(idx) 자동 증가
+			, #{name}
+			, #{id}
+			, #{passwd}
+			, #{post_code}
+			, #{address1}
+			, #{address2}
+<!-- 			, #{email} --> <!-- email1, email2 를 결합하여 전달받았을 경우 -->
+			, CONCAT(#{email1}, '@', #{email2}) -- 이메일 주소(email1, email2) 문자열 결합
+			, #{job}
+			, #{gender}
+			, #{hobby}
+			, #{motivation}
+			, NOW()           -- 가입일자(reg_date)는 현재 시스템 날짜 및 시각 사용
+			, null            -- 탈퇴일자(withdraw_date) 기본값 null
+			, 1               -- 회원상태(member_status) 기본값 1
+			, 'N'             -- 메일인증여부(mail_auth_status) 기본값 'N'
+		)
+	</insert>
+	
+	<!-- 회원 아이디에 대한 패스워드 조회 - SELECT -->
+	<select id="selectMemberPasswd" resultType="string">
+		SELECT passwd
+		FROM member
+		WHERE id = #{id}
+	</select>
+	
+	<!-- 회원 아이디에 대한 상세정보 조회 - SELECT -->
+	<select id="selectMember" resultType="member">
+		SELECT *
+		FROM member
+		WHERE id = #{id}
+	</select>
+	
+	<!-- 회원 아이디가 일치하는 레코드 수정 - UPDATE -->
+	<!-- 뷰페이지에서 email1, email2 를 email 파라미터로 결합하여 전달함(CONCAT() 불필요) -->
+	<update id="updateMember">
+		UPDATE member
+		SET
+			name = #{name}
+			<!-- 새 패스워드(passwd) 존재 여부에 따라 passwd 컬럼 UPDATE 여부가 결정되어야 함 -->
+			<!-- 새 패스워드가 존재할 경우(널스트링이 아님) passwd 컬럼 수정 문장을 SET 절에 추가 => if 필요 -->
+			<if test="!passwd.equals('')">
+				, passwd = #{passwd}
+			</if>
+			, post_code = #{post_code}
+			, address1 = #{address1}
+			, address2 = #{address2}
+			, email = #{email}
+			, job = #{job}
+			, gender = #{gender}
+			, hobby = #{hobby}
+			, motivation = #{motivation}
+		WHERE
+			id = #{id}
+	</update>
+	
+	<!-- 회원 상태(정상, 휴면, 탈퇴) 수정 - UPDATE -->
+	<!-- 전달받은 아이디에 해당하는 member_status 컬럼값을 전달받은 member_status 값으로 설정 -->
+	<!-- 탈퇴일자(withdraw_date)는 현재 시스템의 시각 정보 활용 => NOW() -->
+	<update id="updateMemberStatus">
+		UPDATE member
+		SET	
+			member_status = #{member_status}
+			, withdraw_date = NOW()
+		WHERE 
+			id = #{id}
+	</update>
+	
+	<!-- 이메일 인증 정보 조회 - SELECT -->
+	<!-- 이메일 주소(email)에 해당하는 레코드 조회 -->
+	<!-- 조회 결과를 MailAuthInfo 타입 또는 Map 타입으로 리턴 -->
+	<select id="selectMailAuthInfo" resultType="mailAuthInfo">
+		SELECT *
+		FROM mail_auth_info
+		WHERE email = #{email}
+	</select>
+	
+	<!-- 이메일 인증 정보(email, auth_code) 등록 - INSERT -->
+	<insert id="insertMailAuthInfo">
+		INSERT
+		INTO mail_auth_info
+		VALUES (
+			#{email}
+			, #{auth_code}
+		)
+	</insert>
+	
+	<!-- 이메일 인증 정보 갱신(수정) - UPDATE -->
+	<!-- email 이 일치하는 레코드의 auth_code 컬럼값 변경 -->
+	<update id="updateMailAuthInfo">
+		UPDATE mail_auth_info
+		SET auth_code = #{auth_code}
+		WHERE email = #{email}
+	</update>
+	
+	<!-- 이메일 인증 상태 갱신(수정) - UPDATE -->
+	<!-- member 테이블의 email 이 일치하는 레코드의 메일 인증 상태(mail_auth_status) "Y" 로 변경 -->
+	<update id="updateMailAuthStatus">
+		UPDATE member
+		SET mail_auth_status = 'Y'
+		WHERE email = #{email}
+	</update>
+	
+	<!-- 이메일 인증 정보 삭제 - DELETE -->
+	<!-- mail_auth_info 테이블의 email 이 일치하는 레코드 삭제 -->
+	<delete id="deleteMailAuthInfo">
+		DELETE
+		FROM mail_auth_info		
+		WHERE email = #{email}
+	</delete>
+	
+	<!-- 채팅 - 사용자 아이디 조회 - SELECT -->
+	<select id="selectMemberId" resultType="string">
+		SELECT id
+		FROM member
+		WHERE id = #{id}
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

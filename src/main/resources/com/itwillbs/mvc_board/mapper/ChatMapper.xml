@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.itwillbs.mvc_board.mapper.ChatMapper">
+	<!-- 기존 자신의 채팅방 목록 조회 - SELECT -->
+	<!-- 
+	송신자와 수신자 두 명이 테이블 상에서 1개의 컬럼(user_id)에 대해 2개의 레코드로 나누어져 있음
+	이 때, 기본 user_id = sender_id 파라미터값인 레코드 찾아 user_id 컬럼값을 sender_id 로 표기(AS)하고
+	수신자 아이디는 서브쿼리를 활용하여 receiver_id 로 표기(AS)
+	=> 각 룸 아이디가 동일한 레코드의 user_id 값이 송신자 아이디(또는 c.user_id)값과 다른 레코드를 찾아
+	   user_id 컬럼값을 receiver_id 로 표기
+	-->
+<!-- 	<select id="selectChatRoomList" resultType="chatRoom"> -->
+<!-- 		SELECT  -->
+<!-- 			 c.room_id -->
+<!-- 			 , c.title -->
+<!-- 			 , c.user_id AS sender_id -->
+<!-- 			 , ( -->
+<!-- 			 	SELECT user_id -->
+<!-- 			 	FROM chat_room -->
+<!-- 			 	WHERE  -->
+<!-- 			 		room_id = c.room_id -->
+<!-- 			 		AND user_id != #{sender_id} -->
+<!-- 			 ) AS receiver_id -->
+<!-- 			 , c.status -->
+<!-- 		FROM chat_room AS c -->
+<!-- 		WHERE -->
+<!-- 			user_id = #{sender_id} -->
+<!-- 			AND status > 0;  -->
+<!-- 	</select> -->
+	
+	<!-- 자신이 속한 채팅방 조회 시 해당 채팅방의 읽지 않은 메세지 갯수 조회 추가 - SELECT -->
+	<!-- 
+	SELECT 항목에 서브쿼리 추가(ChatRoom 타입 대신 Map 타입 지정)
+	=> chat_message 테이블에서
+	   1) 룸 아이디가 현재 조회하는 룸 아이디와 같고
+	   2) 발신자(sender_id)가 자신(user_id)과 다르고
+	   3) 메세지 읽음 상태(read_state)가 0
+	   인 메세지들의 갯수를 카운팅
+	-->
+	<select id="selectChatRoomList" resultType="map">
+		SELECT 
+			 c.room_id
+			 , c.title
+			 , c.user_id AS sender_id
+			 , (SELECT user_id
+			 	FROM chat_room
+			 	WHERE 
+			 		room_id = c.room_id
+			 		AND user_id != #{sender_id}
+			 ) AS receiver_id
+			 , c.status
+			 , (SELECT
+			 		COUNT(read_state)
+			 	FROM
+			 		chat_message
+			 	WHERE
+			 		room_id = c.room_id
+			 		AND sender_id != c.user_id
+			 		AND read_state = 0
+			 ) AS unread_count
+		FROM chat_room AS c
+		WHERE
+			user_id = #{sender_id}
+			AND status > 0;       -- 채팅방 상태가 0(자신의 종료한 채팅방)이 아닌 채팅방만 조회
+	</select>
+	
+	<!-- 상대방과의 기존 채팅방 정보 조회 - SELECT -->
+	<!-- user_id 가 자신의 아이디와 같고, title 이 "상대방아이디 님과의 대화" 이고, status 가 0보다 큰 레코드 조회 -->
+	<select id="selectChatRoom" resultType="chatRoom">
+		SELECT 
+			 c.room_id
+			 , c.title
+			 , c.user_id AS sender_id
+			 , (SELECT user_id
+			 	FROM chat_room
+			 	WHERE 
+			 		room_id = c.room_id
+			 		AND user_id != #{sender_id}
+			 ) AS receiver_id
+			 , c.status
+		FROM chat_room AS c
+		WHERE
+			user_id = #{sender_id}
+			AND title = CONCAT(#{receiver_id}, ' 님과의 대화')
+			AND status > 0;       -- 채팅방 상태가 0(자신의 종료한 채팅방)이 아닌 채팅방만 조회
+	</select>
+	
+	
+	<!-- 새 채팅방 정보 추가 - INSERT -->
+	<!-- 1) ChatRoom 객체 1개를 전달받아 2개의 채팅방 정보 추가 -->
+	<insert id="insertChatRoom">
+		INSERT
+		INTO chat_room
+		VALUES 
+			(
+				#{room_id}
+				, CONCAT(#{receiver_id}, #{title}) -- 제목에 아이디 결합
+				, #{sender_id} -- user_id 는 송신자 아이디 설정
+				, #{status}
+			),
+			(
+				#{room_id}
+				, CONCAT(#{sender_id}, #{title}) -- 제목에 아이디 결합
+				, #{receiver_id} -- user_id 는 수신자 아이디 설정
+				, #{status}
+			)
+	</insert>
+	
+	
+	<!-- 2) List<ChatRoom> 객체를 전달받아 각각의 ChatRoom 객체로 각각의 채팅방 정보 추가 -->
+	<insert id="insertChatRoom2">
+		INSERT
+		INTO chat_room
+		VALUES 
+		<!-- 
+		복수개의 레코드(row)를 한꺼번에 INSERT 할 때 마이바티스의 <foreach> 활용
+		=> collection 속성 : 반복을 통해 접근할 객체 타입(list 또는 array)
+		   item 속성 : collection 속성에서 지정한 객체를 다른 이름으로 지정하여 사용 시 설정하는 이름
+		   seperator 속성 : 두 번 이상 반복되는 문장에서 각 문장들을 구별할 구분자
+		   open 속성 : foreach 문 시작 전에 추가할 문자열(현재는 불필요)
+		   close 속성 : foreach 문 종료 후에 추가할 문자열(현재는 불필요) 
+		-->
+		<foreach collection="list" item="chatRoomList" separator=",">
+			(
+				#{chatRoomList.room_id}
+				, #{chatRoomList.title}
+				, #{chatRoomList.sender_id} -- 사용자 아이디는 sender_id 에 전달된 항목만 사용
+				, #{chatRoomList.status}
+			)
+		</foreach>
+	</insert>
+	
+	<!-- 채팅메세지 저장 - INSERT -->
+	<!-- 읽음여부는 기본값 0 으로 전달 -->
+	<!-- 
+	AUTO_INCREMENT 가 설정된 idx 컬럼값을 INSERT 작업 완료 후에 조회해야할 경우
+	insert 태그 속성에 
+	1) userGeneratedKeys="true" 속성 추가,
+	2) keyProperty="ChatMessage2 객체의 idx 저장할 변수명" 속성 추가
+	3) keyColumn="AUTO_INCREMENT 가 설정된 컬럼명" 속성 추가
+	======================
+	또는 <selectKey> 태그 사용하여 "SELECT LAST_INSERT_ID()" 함수 호출 결과를 조회하면
+	마지막에 INSERT 된 레코드의 ID 값(PK) 가져오기 가능
+	-->
+	<insert id="insertChatMessage" useGeneratedKeys="true" keyProperty="idx" keyColumn="idx">
+<!-- 		<selectKey keyProperty="idx" resultType="int" order="AFTER"> -->
+<!-- 			SELECT LAST_INSERT_ID() -->
+<!-- 		</selectKey> -->
+		INSERT
+		INTO chat_message
+		VALUES (
+			null          -- idx AUTO_INCREMENT 값
+			, #{room_id}
+			, #{sender_id}
+			, #{receiver_id}
+			, #{message}
+			, #{type}
+			, #{send_time}
+			, 0
+		)
+	</insert>
+	
+	<!-- 기존 채팅 내역 조회 - SELECT -->
+	<!-- room_id 가 일치하는 모든 레코드 조회 -->
+	<select id="selectChatMessageList" resultType="chatMessage">
+		SELECT *
+		FROM chat_message
+		WHERE room_id = #{room_id}
+	</select>
+	
+	<!-- 조회된 채팅 내역 읽음 표시 처리 - UPDATE -->
+	<!-- chat_message 테이블에서 room_id 가 일치하고 receiver_id 가 #{sender_id} 인 레코드의 -->
+	<!-- read_state 값을 1로 변경 -->
+	<update id="updateChatMessageReadState">
+		UPDATE chat_message
+		SET read_state = 1
+		WHERE
+			room_id = #{room_id}
+			AND receiver_id = #{sender_id}
+	</update>
+	
+	<!-- 단일 채팅 메세지 읽음 처리 - UPDATE -->
+	<update id="updateChatMessageReadState2">
+		UPDATE chat_message
+		SET read_state = 1
+		WHERE idx = #{idx}
+	</update>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

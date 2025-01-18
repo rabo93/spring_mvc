@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+[ class 테이블 정의 ]
+클래스ID(class_id) : 문자 10자, PK
+강사명(class_master) : 문자 10자, NN
+클래스명(class_subject) : 문자 100자, NN
+상세설명(class_content) : 문자 2000자, NN
+커리큘럼(class_curriculum) : 문자 2000자 , NN
+해시태그(hashtag) : 문자 100자, NN
+==============================================
+CREATE TABLE class (
+	class_id VARCHAR(10) PRIMARY KEY,
+	class_master VARCHAR(10) NOT NULL,
+	class_subject VARCHAR(100) NOT NULL,
+	class_content VARCHAR(2000) NOT NULL,
+	class_curriculum VARCHAR(2000) NOT NULL,
+	hashtag VARCHAR(100) NOT NULL
+);
+-->
+<mapper namespace="com.itwillbs.mvc_board.mapper.ChatGPTMapper">
+
+	<!-- 클래스 정보 등록 - INSERT -->
+	<insert id="insertClass">
+		INSERT
+		INTO class
+		VALUES (
+			#{class_id}
+			, #{class_master}
+			, #{class_subject}
+			, #{class_content}
+			, #{class_curriculum}
+			, #{hashtag}
+		)
+	</insert>
+	
+	<!-- 클래스 목록 조회 - SELECT -->
+	<select id="selectClassList" resultType="map">
+		SELECT *
+		FROM class
+	</select>
+	
+	<!-- 클래스 상세정보 조회 - SELECT -->
+	<select id="selectClassInfo" resultType="map">
+		SELECT * 
+		FROM class
+		WHERE class_id = #{class_id}
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

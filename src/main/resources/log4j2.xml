@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Log4j2 는 XML 문서 최상위 요소를 <Configuration> 태그로 설정 -->
+<Configuration>
+	<!-- <Properties> 태그 사용하여 각 설정에서 사용할 속성값을 태그로 정의 -->
+	<!-- 태그 사이에 속성값을 지정하고, 해당 태그는 사용할 위치에서 ${name속성명} 으로 사용 -->
+	<Properties>
+		<Property name="layoutPattern">%d{yyyy-MM-dd HH:mm:ss} %5p [%c] %m%n</Property>
+	</Properties>
+
+	<!-- <Appenders> 태그와 <Loggers> 태그를 통한 기본 설정 -->
+	<!-- 1. Appender : 로그가 출력될 위치(대상) 지정(콘솔, 파일, 롤링파일, 소켓, DB 등) -->
+	<!-- 기존 Log4j 에서 <appender> 태그 내의 class 속성으로 구분하던 대상을 각각의 태그로 직접 구분함 -->
+	<Appenders>
+		<!-- 1) 콘솔 출력을 위한 <Console> 태그 설정 -->
+		<Console name="console" target="SYSTEM_OUT">
+			<!-- <PatternLayout /> 태그를 사용하여 출력할 로그 메세지의 형식 지정 -->
+<!-- 			<PatternLayout /> 디폴트 패턴 적용(로그메세지만 출력됨)  -->
+
+<!-- 			<PatternLayout pattern="%d %5p [%c] %m%n" /> -->
+			<!-- ex) 2024-11-26 14:38:58,923  INFO [org.springframework.web.servlet.DispatcherServlet] Initializing Servlet 'appServlet' -->
+			
+<!-- 			<PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %5p [%c] %m%n" /> -->
+			<PatternLayout pattern="${layoutPattern}" />
+			<!-- ex) 2024-11-26 14:41:20  INFO [org.springframework.web.servlet.DispatcherServlet] Completed initialization in 594 ms -->
+		</Console>
+		
+		<!-- 
+		RollingFile Appender : 파일의 크기 또는 파일 백업 인덱스 등의 지정을 통해서
+		특정 크기 이상으로 파일 크기가 커지거나 특정 기간을 지나면
+		기존 파일(target)을 백업파일(history)로 바꾸고, 다시 새 target 파일에 로깅을 기록함 
+		=> fileName 속성 : 기본 파일(target)의 위치 지정
+		   filePattern 속성 : 백업 파일의 위치 및 파일명 패턴 지정
+		=> 이 때, 파일 위치는 기본적으로 PC 의 경우 이클립스 설치 폴더 기준이며
+		   서버상에서는 톰캣 디렉토리가 기준이 된다.
+		   ex) ./my_log/log.log => PC   : C:\STS4\my_log\log.log
+		                        => 서버 : tomcat/my_log/log.log
+		-->
+		<RollingFile name="rollingFile" fileName="./my_log/mvc_board/rolling_log.log" 
+						filePattern="./my_log/mvc_board/rolling_log-%d{yyyy-MM-dd}_%i.log">
+			<PatternLayout pattern="${layoutPattern}" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="10MB" />
+			</Policies>
+		</RollingFile>
+		
+		<RollingFile name="rollingFileForSQL" fileName="./my_log/mvc_board/rolling_log_sql.log" 
+						filePattern="./my_log/mvc_board/rolling_log_sql-%d{yyyy-MM-dd}_%i.log">
+			<PatternLayout pattern="${layoutPattern}" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="1MB" />
+				<!-- 만약, 날짜 또는 시각을 기준으로 특정 기간마다 롤링을 수행할 경우 -->
+<!-- 				<TimeBasedTriggeringPolicy interval="1" /> -->
+			</Policies>
+		</RollingFile>
+	</Appenders>
+	
+	<!-- 2. Logger : 로깅 작업을 실질적으로 수행 -->
+	<!-- 애플리케이션 내에서 사용할 각각의 로거를 <Loggers> 태그 내에 <Root> 태그(필수) 와 <Logger> 태그(한 개 이상 지정 가능)로 표현  -->
+	<Loggers>
+	<!-- Logger 태그 속성 : name(Logger 이름), level(Log Level = 심각도), additivity(중복로깅여부, true or false => 주로 false) -->
+	<!-- Root 태그는 보통 level 속성만 지정함 -->
+	<!-- Logger 또는 Root 태그 내의 AppenderRef 태그의 ref 속성에 출력할 대상 Appender명(name 속성값) 지정 -->
+		<Root level="WARN">
+			<AppenderRef ref="console"/>
+			<AppenderRef ref="rollingFile"/>
+		</Root>
+		
+		<!-- 사용자 정의 클래스 내에서 Logger 객체를 활용하여 로그메세지 출력 시 처리 설정 -->
+		<!-- level 속성을 INFO 로 지정 시 Logger 객체의 메서드는 info, warn, error 만 출력됨 -->
+		<!-- debug() 메서드로 출력한 로그도 확인하려면 레벨을 DEBUG 로 낮춰야함 -->
+		<!-- 즉, 로그 레벨(TRACE < DEBUG < INFO < WARN < ERROR < FATAL) 순으로 -->
+		<!-- INFO 레벨은 INFO 레벨부터 우측 방향의 심각도에 해당하는 로그만 출력함 -->
+		<Logger name="com.itwillbs.mvc_board" level="INFO" additivity="false">
+			<AppenderRef ref="console"/>  
+		</Logger>
+		
+<!-- 		<Logger name="org.springframework.core" level="INFO" additivity="false"> -->
+<!-- 			<AppenderRef ref="console"/>   -->
+<!-- 		</Logger> -->
+		
+		<!-- ====================================================== -->
+		<!-- log4jdbc SQL 로그를 위한 SQL Logger 항목 추가 -->
+		<!-- 1. jdbc.sqlonly : SQL 쿼리 문장에 대한 로그(전달인자 포함한 문장 표시) -->
+<!-- 		<Logger name="jdbc.sqlonly" level="INFO" additivity="false"> -->
+<!-- 			<AppenderRef ref="console"/>   -->
+<!-- 		</Logger> -->
+		
+		
+		<!-- 2. jdbc.sqltiming : SQL 문장과 실행에 소요된 시간(밀리초)에 대한 로그 -->
+		<!-- sqlonly 로그를 포함하므로 둘 중 하나만 사용해도 됨 -->
+		<Logger name="jdbc.sqltiming" level="INFO" additivity="false">
+			<AppenderRef ref="console"/>  
+			<AppenderRef ref="rollingFileForSQL"/>  
+		</Logger>
+		
+		<!-- 3. jdbc.audit : JDBC 호출 정보에 대한 로그(ResultSet 결과값 제외) => 내용 많음 -->
+<!-- 		<Logger name="jdbc.audit" level="INFO" additivity="false"> -->
+<!-- 			<AppenderRef ref="console"/>   -->
+<!-- 		</Logger> -->
+	
+		<!-- 4. jdbc.result : ResultSet 객체 내용을 포함한 JDBC 호출 정보에 대한 로그 => 내용 많음 -->
+<!-- 		<Logger name="jdbc.result" level="INFO" additivity="false"> -->
+<!-- 			<AppenderRef ref="console"/>   -->
+<!-- 		</Logger> -->
+		
+		<!-- 5. jdbc.resultsettable : SELECT 실행 결과(데이터 테이블 = ResultSet 객체 내용) 에 대한 로그 -->
+		<Logger name="jdbc.resultsettable" level="INFO" additivity="false">
+			<AppenderRef ref="console"/>  
+			<AppenderRef ref="rollingFileForSQL"/>  
+		</Logger>
+		<!-- ======================= 여기까지 SQL 로그 항목 추가 ======================= -->
+		
+		
+	</Loggers>
+</Configuration>
+
+
+
+
+
+
+
+
+
+
+
+
